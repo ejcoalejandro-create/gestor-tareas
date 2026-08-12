@@ -6,7 +6,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabasconnection = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 console.log('Supabase conectado:', supabaseconnection);
 
-async function cargarTareas() {
+async function getTasks() {
 try {
 const { data, error } = await supabase
 .from('tasks')

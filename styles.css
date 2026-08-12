@@ -1,0 +1,151 @@
+/* styles.css */
+/* Reset básico */
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
+/* Estilos generales */
+body {
+font-family: 'Segoe UI', Tahoma, sans-serif;
+background: #c8f7c5;
+min-height: 100vh;
+padding: 20px;
+}
+/* Header */
+header {
+text-align: center;
+color: white;
+margin-bottom: 30px;
+}
+h1 {
+font-size: 2.5rem;
+font-weight: 700;
+}
+/* Contenedor principal */
+main {
+max-width: 600px;
+margin: 0 auto;
+background: white;
+padding: 30px;
+border-radius: 15px;
+box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+/* Sección de añadir tarea */
+.add-task {
+display: flex;
+gap: 10px;
+margin-bottom: 30px;
+}
+#taskInput {
+flex: 1;
+padding: 12px;
+border: 2px solid #e0e0e0;
+border-radius: 8px;
+font-size: 16px;
+}
+#taskInput:focus {
+outline: none;
+border-color: #667eea;
+}
+#addButton {
+padding: 12px 24px;
+background: #667eea;
+color: white;
+border: none;
+border-radius: 8px;
+cursor: pointer;
+font-size: 16px;
+font-weight: bold;
+transition: background 0.3s;
+}
+#addButton:hover {
+background: #5568d3;
+}
+/* Lista de tareas */
+.task-list-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 8px;
+}
+.task-list h2 {
+color: #333;
+font-size: 1.3rem;
+margin: 0;
+}
+#clearCompletedButton {
+background: #8e44ad;
+color: white;
+border: none;
+padding: 8px 12px;
+border-radius: 6px;
+cursor: pointer;
+font-size: 14px;
+}
+#clearCompletedButton:hover {
+background: #7d3c98;
+}
+#taskCounter {
+color: #666;
+margin-bottom: 15px;
+font-weight: 600;
+}
+.task-filters {
+display: flex;
+align-items: center;
+gap: 8px;
+margin-bottom: 15px;
+}
+.task-filters label {
+font-weight: 600;
+color: #555;
+}
+.task-filters select {
+padding: 6px 10px;
+border: 1px solid #ccc;
+border-radius: 6px;
+}
+#taskList {
+list-style: none;
+}
+#taskList li {
+background: #f8f9fa;
+padding: 15px;
+margin-bottom: 10px;
+border-radius: 8px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+transition: transform 0.2s;
+}
+#taskList li:hover {
+transform: translateX(5px);
+}
+#taskList li span {
+flex: 1;
+cursor: pointer;
+}
+#taskList li.completed span {
+text-decoration: line-through;
+opacity: 0.6;
+}
+.delete-btn {
+background: #e74c3c;
+color: white;
+border: none;
+padding: 8px 12px;
+border-radius: 5px;
+cursor: pointer;
+font-size: 14px;
+}
+.delete-btn:hover {
+background: #c0392b;
+}
+/* Footer */
+footer {
+text-align: center;
+color: white;
+margin-top: 30px;
+opacity: 0.8;
+}

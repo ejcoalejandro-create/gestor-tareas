@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Gestor de Tareas</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>📝 Mis Tareas</h1>
+    </header>
+
+    <main>
+
+        <section class="add-task">
+            <input type="text" id="taskInput" placeholder="Escribe una tarea...">
+            <button id="addButton">Añadir</button>
+        </section>
+
+        <section class="task-list">
+            <div class="task-list-header">
+                <h2>Tareas pendientes</h2>
+                <button id="clearCompletedButton">Limpiar completadas</button>
+            </div>
+            <div class="task-filters">
+                <label for="filterSelect">Filtrar:</label>
+                <select id="filterSelect">
+                    <option value="all">Mostrar todas</option>
+                    <option value="pending">Solo pendientes</option>
+                    <option value="completed">Solo completadas</option>
+                </select>
+            </div>
+            <p id="taskCounter">0 tareas pendientes</p>
+            <ul id="taskList">
+                <!-- Las tareas aparecerán aquí -->
+            </ul>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>Creado con ayuda de IA 🤖</p>
+    </footer>
+
+    <script src="app.js"></script>
+
+</body>
+</html>

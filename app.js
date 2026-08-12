@@ -1,5 +1,13 @@
 // app.js
 
+// Configuración de Supabase
+const SUPABASE_URL = "https://qdierydswmebuwwvmywa.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkaWVyeWRzd21lYnV3d3ZteXdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0ODgzMzAsImV4cCI6MjEwMjA2NDMzMH0.W7YgaAWMuqSlExpuvjRqYU7hFMaCqVTHK-klttNex1s";
+// Crear cliente de Supabase
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('Supabase conectado:', supabase);
+
+
 async function obtenerNombresDeUsuarios() {
 try {
 const response = await fetch('https://jsonplaceholder.typicode.com/users');

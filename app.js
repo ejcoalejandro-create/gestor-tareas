@@ -1,4 +1,27 @@
 // app.js
+
+async function cargarTareasDeAPI() {
+try {
+const response = await fetch('https://jsonplaceholder.typicode.com/todos?_limit=5');
+const tareasAPI = await response.json();
+// Convertir formato de la API a nuestro formato
+tareasAPI.forEach(tarea => {
+tasks.push({
+id: tarea.id,
+text: tarea.title,
+completed: tarea.completed
+});
+});
+renderTasks();
+} catch (error) {
+console.error('Error al cargar tareas:', error);
+alert('No se pudieron cargar las tareas de ejemplo');
+}
+}
+// Botón para cargar tareas de ejemplo
+const loadExampleBtn = document.getElementById('loadExampleBtn');
+loadExampleBtn.addEventListener('click', cargarTareasDeAPI);
+
 // ========== DATOS (del Módulo 2) ==========
 let tasks = [];
 function addTask(text) {

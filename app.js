@@ -20,7 +20,9 @@ alert('No se pudieron cargar las tareas de ejemplo');
 }
 // Botón para cargar tareas de ejemplo
 const loadExampleBtn = document.getElementById('loadExampleBtn');
+if (loadExampleBtn) {
 loadExampleBtn.addEventListener('click', cargarTareasDeAPI);
+}
 
 // ========== DATOS (del Módulo 2) ==========
 let tasks = [];

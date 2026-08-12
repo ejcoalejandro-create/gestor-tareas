@@ -1,12 +1,114 @@
 // app.js
-
-// Configuración de Supabase
 const SUPABASE_URL = "https://qdierydswmebuwwvmywa.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkaWVyeWRzd21lYnV3d3ZteXdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0ODgzMzAsImV4cCI6MjEwMjA2NDMzMH0.W7YgaAWMuqSlExpuvjRqYU7hFMaCqVTHK-klttNex1s";
-// Crear cliente de Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log('Supabase conectado:', supabase);
 
+// Crear cliente de Supabase
+const supabasconnection = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('Supabase conectado:', supabaseconnection);
+
+async function cargarTareas() {
+try {
+const { data, error } = await supabase
+.from('tasks')
+.select('*')
+.order('created_at', { ascending: false });
+if (error) throw error;
+tasks = data;
+renderTasks();
+} catch (error) {
+console.error('Error al cargar tareas:', error.message);
+mostrarError('No se pudieron cargar las tareas');
+}
+}
+async function addTask(text) {
+try {
+const { data, error } = await supabase
+.from('tasks')
+.insert([{ text, completed: false }])
+.select();
+if (error) throw error;
+// Añadir a array local
+tasks.unshift(data[0]);
+renderTasks();
+} catch (error) {
+console.error('Error al añadir tarea:', error.message);
+mostrarError('No se pudo añadir la tarea');
+}
+}
+async function toggleTask(id) {
+try {
+// Encontrar tarea actual
+const tarea = tasks.find(t => t.id === id);
+if (!tarea) return;
+const { data, error } = await supabase
+.from('tasks')
+.update({ completed: !tarea.completed })
+.eq('id', id)
+.select();
+if (error) throw error;
+// Actualizar array local
+const index = tasks.findIndex(t => t.id === id);
+tasks[index] = data[0];
+renderTasks();
+} catch (error) {
+console.error('Error al actualizar tarea:', error.message);
+mostrarError('No se pudo actualizar la tarea');
+}
+}
+async function deleteTask(id) {
+try {
+const { error } = await supabase
+.from('tasks')
+.delete()
+.eq('id', id);
+if (error) throw error;
+// Eliminar de array local
+tasks = tasks.filter(t => t.id !== id);
+renderTasks();
+} catch (error) {
+console.error('Error al eliminar tarea:', error.message);
+mostrarError('No se pudo eliminar la tarea');
+}
+}
+
+// ========== INTERFAZ (igual que antes) ==========
+const taskInput = document.getElementById('taskInput');
+const addButton = document.getElementById('addButton');
+const taskList = document.getElementById('taskList');
+function renderTasks() {
+taskList.innerHTML = '';
+tasks.forEach(task => {
+const li = document.createElement('li');
+const span = document.createElement('span');
+const deleteBtn = document.createElement('button');
+span.textContent = task.text;
+if (task.completed) {
+li.classList.add('completed');
+}
+span.addEventListener('click', () => toggleTask(task.id));
+deleteBtn.textContent = '🗑️';
+deleteBtn.className = 'delete-btn';
+deleteBtn.addEventListener('click', () => deleteTask(task.id));
+li.appendChild(span);
+li.appendChild(deleteBtn);
+taskList.appendChild(li);
+});
+}
+addButton.addEventListener('click', async () => {
+const text = taskInput.value.trim();
+if (text === '') {
+alert('Escribe una tarea primero');
+return;
+}
+await addTask(text);
+taskInput.value = '';
+taskInput.focus();
+});
+taskInput.addEventListener('keypress', (e) => {
+if (e.key === 'Enter') {
+addButton.click();
+}
+});
 
 async function obtenerNombresDeUsuarios() {
 try {

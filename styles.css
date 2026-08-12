@@ -91,6 +91,12 @@ color: #666;
 margin-bottom: 15px;
 font-weight: 600;
 }
+.loading-message {
+margin: 0 0 15px 0;
+color: #2d6a4f;
+font-weight: 600;
+font-size: 0.95rem;
+}
 .task-filters {
 display: flex;
 align-items: center;

@@ -1,21 +1,71 @@
 // app.js
 
+async function obtenerNombresDeUsuarios() {
+try {
+const response = await fetch('https://jsonplaceholder.typicode.com/users');
+const usuarios = await response.json();
+const nombres = usuarios.map(usuario => usuario.name);
+console.log(nombres);
+} catch (error) {
+console.error('Error al cargar usuarios:', error);
+}
+}
+
+async function crearTareaEnAPI() {
+const nuevaTarea = {
+userId: 1,
+title: 'Nueva tarea creada por POST',
+completed: false
+};
+
+try {
+const response = await fetch('https://jsonplaceholder.typicode.com/todos', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json'
+},
+body: JSON.stringify(nuevaTarea)
+});
+
+const resultado = await response.json();
+console.log('Respuesta del POST:', resultado);
+return resultado;
+} catch (error) {
+console.error('Error al crear la tarea:', error);
+}
+}
+
+const loadingMessage = document.getElementById('loadingMessage');
+
 async function cargarTareasDeAPI() {
+if (!loadExampleBtn || !loadingMessage) return;
+
+loadExampleBtn.disabled = true;
+loadingMessage.hidden = false;
+loadingMessage.textContent = 'Cargando tareas de ejemplo...';
+
 try {
 const response = await fetch('https://jsonplaceholder.typicode.com/todos?_limit=5');
 const tareasAPI = await response.json();
-// Convertir formato de la API a nuestro formato
-tareasAPI.forEach(tarea => {
-tasks.push({
+
+const tareasNuevas = tareasAPI.map(tarea => ({
 id: tarea.id,
 text: tarea.title,
-completed: tarea.completed
-});
-});
+completed: tarea.completed,
+createdAt: new Date().toLocaleString('es-ES')
+}));
+
+const idsExistentes = new Set(tasks.map(task => task.id));
+const tareasSinDuplicar = tareasNuevas.filter(tarea => !idsExistentes.has(tarea.id));
+
+tasks = [...tasks, ...tareasSinDuplicar];
 renderTasks();
 } catch (error) {
 console.error('Error al cargar tareas:', error);
 alert('No se pudieron cargar las tareas de ejemplo');
+} finally {
+loadExampleBtn.disabled = false;
+loadingMessage.hidden = true;
 }
 }
 // Botón para cargar tareas de ejemplo

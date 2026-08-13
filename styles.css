@@ -37,6 +37,7 @@ main {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  align-items: center;
 }
 
 #taskInput {
@@ -48,9 +49,32 @@ main {
   background: #f9fbf9;
 }
 
-#taskInput:focus {
+#taskPriority,
+#searchInput {
+  padding: 11px 12px;
+  border: 2px solid #dfe7df;
+  border-radius: 10px;
+  font-size: 15px;
+  background: #f9fbf9;
+}
+
+#taskPriority {
+  min-width: 110px;
+}
+
+#taskInput:focus,
+#taskPriority:focus,
+#searchInput:focus {
   outline: none;
   border-color: #3a9c5e;
+}
+
+.toolbar {
+  margin-bottom: 18px;
+}
+
+#searchInput {
+  width: 100%;
 }
 
 #addButton,
@@ -158,6 +182,32 @@ main {
   color: #273027;
 }
 
+.priority-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 8px;
+}
+
+.priority-baja {
+  background: #dff7e6;
+  color: #216b3a;
+}
+
+.priority-media {
+  background: #fff2cc;
+  color: #8a6500;
+}
+
+.priority-alta {
+  background: #ffe0e0;
+  color: #9b1c1c;
+}
+
 #taskList li.completed span {
   text-decoration: line-through;
   opacity: 0.65;
@@ -195,4 +245,28 @@ button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+.error-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #e74c3c;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease-out;
+  z-index: 1000;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }

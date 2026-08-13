@@ -17,10 +17,17 @@
 
         <section class="add-task">
             <input type="text" id="taskInput" placeholder="Escribe una tarea...">
+            <select id="taskPriority" aria-label="Prioridad de la tarea">
+                <option value="baja">Baja</option>
+                <option value="media" selected>Media</option>
+                <option value="alta">Alta</option>
+            </select>
             <button id="addButton">Añadir</button>
-            <button id="loadExampleBtn">Cargar ejemplos</button>
         </section>
-        <p id="loadingMessage" class="loading-message" hidden>Cargando tareas de ejemplo...</p>
+
+        <div class="toolbar">
+            <input type="text" id="searchInput" placeholder="Buscar tareas..." aria-label="Buscar tareas">
+        </div>
 
         <section class="task-list">
             <div class="task-list-header">

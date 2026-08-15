@@ -146,6 +146,7 @@ main {
   align-items: center;
   gap: 8px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .task-filters label {
@@ -158,6 +159,59 @@ main {
   border-radius: 8px;
   border: 1px solid #d3d9d3;
   background: white;
+}
+
+.secondary-button {
+  background: #5c7cfa;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 9px 12px;
+  font-weight: 600;
+}
+
+.secondary-button:hover {
+  transform: translateY(-1px);
+}
+
+.stats-panel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(80px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.stat-card {
+  background: #f1f7f1;
+  border: 1px solid #dfe9df;
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.stat-card span {
+  display: block;
+  color: #5a665a;
+  font-size: 0.72rem;
+  margin-bottom: 6px;
+}
+
+.stat-card strong {
+  font-size: 1.35rem;
+  color: #1e2b1e;
+}
+
+.stat-card.pending strong {
+  color: #a36a00;
+}
+
+.stat-card.completed strong {
+  color: #246d3f;
+}
+
+.stat-card.high-priority strong {
+  color: #a33030;
 }
 
 #taskList {

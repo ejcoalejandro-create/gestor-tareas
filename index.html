@@ -45,6 +45,25 @@
                     <option value="pending">Solo pendientes</option>
                     <option value="completed">Solo completadas</option>
                 </select>
+                <button id="exportCsvBtn" class="secondary-button">Exportar PDF</button>
+            </div>
+            <div class="stats-panel" aria-label="Estadísticas de tareas">
+                <div class="stat-card">
+                    <span>Total</span>
+                    <strong id="statTotal">0</strong>
+                </div>
+                <div class="stat-card pending">
+                    <span>Pendientes</span>
+                    <strong id="statPending">0</strong>
+                </div>
+                <div class="stat-card completed">
+                    <span>Completadas</span>
+                    <strong id="statCompleted">0</strong>
+                </div>
+                <div class="stat-card high-priority">
+                    <span>Alta prioridad</span>
+                    <strong id="statHighPriority">0</strong>
+                </div>
             </div>
             <p id="taskCounter">0 tareas pendientes</p>
             <ul id="taskList">
@@ -61,6 +80,8 @@
 
     <!-- Carga de librerías externas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="app.js"></script>
 
 </body>

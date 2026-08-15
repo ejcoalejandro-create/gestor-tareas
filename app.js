@@ -20,7 +20,12 @@
     clearCompletedButton: document.getElementById('clearCompletedButton'),
     filterSelect: document.getElementById('filterSelect'),
     searchInput: document.getElementById('searchInput'),
-    taskPriority: document.getElementById('taskPriority')
+    taskPriority: document.getElementById('taskPriority'),
+    exportCsvBtn: document.getElementById('exportCsvBtn'),
+    statTotal: document.getElementById('statTotal'),
+    statPending: document.getElementById('statPending'),
+    statCompleted: document.getElementById('statCompleted'),
+    statHighPriority: document.getElementById('statHighPriority')
   };
 
   // Guarda eventos en la consola y, si existe, también en la tabla task_logs de Supabase.
@@ -106,12 +111,20 @@
     return elements.taskPriority ? elements.taskPriority.value : 'media';
   }
 
-  // Actualiza el texto con el número de tareas pendientes.
+  // Actualiza el texto con el número de tareas pendientes y los indicadores de estadística.
   function updateTaskCounter() {
     if (!elements.taskCounter) return;
 
     const pendientes = state.tasks.filter(task => !task.completed).length;
+    const completadas = state.tasks.filter(task => task.completed).length;
+    const altas = state.tasks.filter(task => task.priority === 'alta').length;
+
     elements.taskCounter.textContent = pendientes === 1 ? '1 tarea pendiente' : `${pendientes} tareas pendientes`;
+
+    if (elements.statTotal) elements.statTotal.textContent = String(state.tasks.length);
+    if (elements.statPending) elements.statPending.textContent = String(pendientes);
+    if (elements.statCompleted) elements.statCompleted.textContent = String(completadas);
+    if (elements.statHighPriority) elements.statHighPriority.textContent = String(altas);
   }
 
   // Aplica filtros por estado y texto para mostrar solo las tareas relevantes.
@@ -135,6 +148,8 @@
   // Dibuja la lista de tareas en el DOM según el estado actual y el filtro activo.
   function renderTasks() {
     if (!elements.taskList) return;
+
+    updateTaskCounter();
 
     elements.taskList.innerHTML = '';
     const filteredTasks = getFilteredTasks();
@@ -185,6 +200,51 @@
       priority: prioridad,
       created_at: new Date().toISOString()
     };
+  }
+
+  // Genera un PDF con una tabla de tareas y sus columnas relevantes.
+  function exportarPDF() {
+    if (!state.tasks.length) {
+      mostrarError('No hay tareas para exportar.');
+      return;
+    }
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      mostrarError('La librería de PDF no está disponible.');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const columnas = ['ID', 'Tarea', 'Estado', 'Prioridad', 'Fecha'];
+    const filas = state.tasks.map(task => [
+      String(task.id ?? ''),
+      String(task.text ?? ''),
+      task.completed ? 'Completada' : 'Pendiente',
+      String(task.priority ?? 'media'),
+      String(task.created_at || task.createdAt || '')
+    ]);
+
+    doc.setFontSize(16);
+    doc.text('Listado de tareas', 14, 18);
+
+    doc.autoTable({
+      head: [columnas],
+      body: filas,
+      startY: 26,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [92, 124, 250], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      margin: { left: 14, right: 14 }
+    });
+
+    doc.save('tareas.pdf');
+    registrarLog('export_pdf', { count: state.tasks.length });
+  }
+
+  function exportarCSV() {
+    return exportarPDF();
   }
 
   // Carga todas las tareas existentes desde la tabla tasks.
@@ -414,6 +474,12 @@
         await clearCompletedTasks();
       });
     }
+
+    if (elements.exportCsvBtn) {
+      elements.exportCsvBtn.addEventListener('click', () => {
+        exportarPDF();
+      });
+    }
   }
 
   // Inicializa la app y carga las tareas desde Supabase si está disponible.
@@ -434,6 +500,8 @@
   window.deleteTask = deleteTask;
   window.toggleTask = toggleTask;
   window.clearCompletedTasks = clearCompletedTasks;
+  window.exportarPDF = exportarPDF;
+  window.exportarCSV = exportarPDF;
   window.taskLogs = state.logs;
   window.registrarLog = registrarLog;
 

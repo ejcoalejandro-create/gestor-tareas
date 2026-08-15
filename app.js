@@ -113,15 +113,16 @@
 
   // Actualiza el texto con el número de tareas pendientes y los indicadores de estadística.
   function updateTaskCounter() {
-    if (!elements.taskCounter) return;
-
+    const total = state.tasks.length;
     const pendientes = state.tasks.filter(task => !task.completed).length;
     const completadas = state.tasks.filter(task => task.completed).length;
     const altas = state.tasks.filter(task => task.priority === 'alta').length;
 
-    elements.taskCounter.textContent = pendientes === 1 ? '1 tarea pendiente' : `${pendientes} tareas pendientes`;
+    if (elements.taskCounter) {
+      elements.taskCounter.textContent = pendientes === 1 ? '1 tarea pendiente' : `${pendientes} tareas pendientes`;
+    }
 
-    if (elements.statTotal) elements.statTotal.textContent = String(state.tasks.length);
+    if (elements.statTotal) elements.statTotal.textContent = String(total);
     if (elements.statPending) elements.statPending.textContent = String(pendientes);
     if (elements.statCompleted) elements.statCompleted.textContent = String(completadas);
     if (elements.statHighPriority) elements.statHighPriority.textContent = String(altas);

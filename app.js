@@ -2,19 +2,66 @@
   const SUPABASE_URL = 'https://qdierydswmebuwwvmywa.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkaWVyeWRzd21lYnV3d3ZteXdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0ODgzMzAsImV4cCI6MjEwMjA2NDMzMH0.W7YgaAWMuqSlExpuvjRqYU7hFMaCqVTHK-klttNex1s';
 
+  // Estado global de la app: tareas actuales, filtro activo y registro de eventos.
+  const state = {
+    tasks: [],
+    filter: 'all',
+    logs: []
+  };
+
+  // Cliente de Supabase para leer y guardar tareas.
   const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-  let tasks = [];
-  let currentFilter = 'all';
 
-  const taskInput = document.getElementById('taskInput');
-  const addButton = document.getElementById('addButton');
-  const taskList = document.getElementById('taskList');
-  const taskCounter = document.getElementById('taskCounter');
-  const clearCompletedButton = document.getElementById('clearCompletedButton');
-  const filterSelect = document.getElementById('filterSelect');
-  const searchInput = document.getElementById('searchInput');
-  const taskPriority = document.getElementById('taskPriority');
+  const elements = {
+    taskInput: document.getElementById('taskInput'),
+    addButton: document.getElementById('addButton'),
+    taskList: document.getElementById('taskList'),
+    taskCounter: document.getElementById('taskCounter'),
+    clearCompletedButton: document.getElementById('clearCompletedButton'),
+    filterSelect: document.getElementById('filterSelect'),
+    searchInput: document.getElementById('searchInput'),
+    taskPriority: document.getElementById('taskPriority')
+  };
 
+  // Guarda eventos en la consola y, si existe, también en la tabla task_logs de Supabase.
+  function registrarLog(evento, detalle = {}, payload = {}) {
+    const entrada = {
+      timestamp: new Date().toISOString(),
+      evento,
+      detalle,
+      payload
+    };
+
+    state.logs.push(entrada);
+    console.log('[TaskLogger]', entrada);
+
+    if (!supabase) return;
+
+    try {
+      supabase
+        .from('task_logs')
+        .insert([
+          {
+            event: evento,
+            detail: JSON.stringify(detalle),
+            payload: JSON.stringify(payload),
+            created_at: entrada.timestamp
+          }
+        ])
+        .then(({ error }) => {
+          if (error) {
+            console.warn('[TaskLogger] No se pudo guardar el log en Supabase:', error.message);
+          }
+        })
+        .catch(error => {
+          console.warn('[TaskLogger] Error al escribir en task_logs:', error.message);
+        });
+    } catch (error) {
+      console.warn('[TaskLogger] Fallo al preparar el log:', error.message);
+    }
+  }
+
+  // Muestra un aviso temporal en pantalla cuando hay un error de validación o de conexión.
   function mostrarError(mensaje) {
     const existing = document.querySelector('.error-notification');
     if (existing) existing.remove();
@@ -30,16 +77,18 @@
   }
 
   function mostrarCarga(activo) {
-    if (!addButton) return;
-    addButton.disabled = activo;
-    addButton.textContent = activo ? 'Añadiendo...' : 'Añadir';
+    if (!elements.addButton) return;
+    elements.addButton.disabled = activo;
+    elements.addButton.textContent = activo ? 'Añadiendo...' : 'Añadir';
   }
 
+  // Formatea las fechas para mostrarlas en el usuario en formato local.
   function formatearFecha(fecha) {
     if (!fecha) return new Date().toLocaleString('es-ES');
     return new Date(fecha).toLocaleString('es-ES');
   }
 
+  // Normaliza los datos que llegan de Supabase para que siempre tengan la misma estructura.
   function normalizarTarea(task) {
     return {
       ...task,
@@ -52,34 +101,42 @@
     };
   }
 
+  // Devuelve la prioridad elegida en el selector del formulario.
+  function getPriorityValue() {
+    return elements.taskPriority ? elements.taskPriority.value : 'media';
+  }
+
+  // Actualiza el texto con el número de tareas pendientes.
   function updateTaskCounter() {
-    if (!taskCounter) return;
-    const pendingTasks = tasks.filter(task => !task.completed).length;
-    taskCounter.textContent = pendingTasks === 1 ? '1 tarea pendiente' : `${pendingTasks} tareas pendientes`;
+    if (!elements.taskCounter) return;
+
+    const pendientes = state.tasks.filter(task => !task.completed).length;
+    elements.taskCounter.textContent = pendientes === 1 ? '1 tarea pendiente' : `${pendientes} tareas pendientes`;
   }
 
+  // Aplica filtros por estado y texto para mostrar solo las tareas relevantes.
   function getFilteredTasks() {
-    const searchValue = (searchInput ? searchInput.value : '').trim().toLowerCase();
+    const busqueda = (elements.searchInput ? elements.searchInput.value : '').trim().toLowerCase();
+    let tareasFiltradas = [...state.tasks];
 
-    let filtered = tasks;
-
-    if (currentFilter === 'pending') {
-      filtered = filtered.filter(task => !task.completed);
-    } else if (currentFilter === 'completed') {
-      filtered = filtered.filter(task => task.completed);
+    if (state.filter === 'pending') {
+      tareasFiltradas = tareasFiltradas.filter(task => !task.completed);
+    } else if (state.filter === 'completed') {
+      tareasFiltradas = tareasFiltradas.filter(task => task.completed);
     }
 
-    if (searchValue) {
-      filtered = filtered.filter(task => task.text.toLowerCase().includes(searchValue));
+    if (busqueda) {
+      tareasFiltradas = tareasFiltradas.filter(task => task.text.toLowerCase().includes(busqueda));
     }
 
-    return filtered;
+    return tareasFiltradas;
   }
 
+  // Dibuja la lista de tareas en el DOM según el estado actual y el filtro activo.
   function renderTasks() {
-    if (!taskList) return;
+    if (!elements.taskList) return;
 
-    taskList.innerHTML = '';
+    elements.taskList.innerHTML = '';
     const filteredTasks = getFilteredTasks();
     updateTaskCounter();
 
@@ -87,7 +144,7 @@
       const emptyState = document.createElement('li');
       emptyState.className = 'empty-state';
       emptyState.textContent = 'No hay tareas en este filtro.';
-      taskList.appendChild(emptyState);
+      elements.taskList.appendChild(emptyState);
       return;
     }
 
@@ -116,17 +173,31 @@
       li.appendChild(span);
       li.appendChild(time);
       li.appendChild(deleteBtn);
-      taskList.appendChild(li);
+      elements.taskList.appendChild(li);
     });
   }
 
+  // Prepara el objeto que se enviará a Supabase cuando se cree una nueva tarea.
+  function crearPayloadTarea(texto, prioridad) {
+    return {
+      text: texto,
+      completed: false,
+      priority: prioridad,
+      created_at: new Date().toISOString()
+    };
+  }
+
+  // Carga todas las tareas existentes desde la tabla tasks.
   async function getTasksFromSupabase() {
     if (!supabase) {
       console.warn('Supabase no disponible.');
+      registrarLog('supabase_no_available', { reason: 'No hay cliente de Supabase' });
       return;
     }
 
     try {
+      registrarLog('load_tasks_request', { source: 'supabase' });
+
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
@@ -134,14 +205,17 @@
 
       if (error) throw error;
 
-      tasks = (data || []).map(normalizarTarea);
+      state.tasks = (data || []).map(normalizarTarea);
+      registrarLog('load_tasks_success', { count: state.tasks.length });
       renderTasks();
     } catch (error) {
       console.error('Error al cargar tareas desde Supabase:', error.message);
+      registrarLog('load_tasks_error', { message: error.message });
       mostrarError('No se pudieron cargar las tareas desde Supabase');
     }
   }
 
+  // Inserta una nueva tarea en Supabase y la añade al estado local para re-renderizar la vista.
   async function addTask(text) {
     const value = text.trim();
     if (!value) return;
@@ -151,17 +225,12 @@
       return;
     }
 
-    const priorityValue = taskPriority ? taskPriority.value : 'media';
+    const priorityValue = getPriorityValue();
     mostrarCarga(true);
+    registrarLog('add_task_start', { text: value, priority: priorityValue });
 
     try {
-      const payload = {
-        text: value,
-        completed: false,
-        priority: priorityValue,
-        created_at: new Date().toISOString()
-      };
-
+      const payload = crearPayloadTarea(value, priorityValue);
       const result = await supabase
         .from('tasks')
         .insert([payload])
@@ -169,22 +238,29 @@
 
       if (result.error) {
         if (/priority/.test(result.error.message)) {
-          throw new Error('Falta la columna priority en la tabla tasks. Ejecuta el SQL de Supabase indicado en la documentación.');
+          const sqlError = new Error('Falta la columna priority en la tabla tasks. Ejecuta el SQL de Supabase indicado en la documentación.');
+          registrarLog('add_task_error', { message: sqlError.message, payload }, { request: payload });
+          throw sqlError;
         }
+
+        registrarLog('add_task_error', { message: result.error.message, payload }, { request: payload });
         throw result.error;
       }
 
       const insertedTask = result.data && result.data[0] ? result.data[0] : payload;
-      tasks = [normalizarTarea(insertedTask), ...tasks];
+      state.tasks = [normalizarTarea(insertedTask), ...state.tasks];
+      registrarLog('add_task_success', { id: insertedTask.id, priority: insertedTask.priority || priorityValue }, { saved: insertedTask });
       renderTasks();
     } catch (error) {
       console.error('Error al añadir tarea en Supabase:', error.message);
+      registrarLog('add_task_failure', { message: error.message, priority: priorityValue }, { request: { text: value, priority: priorityValue } });
       mostrarError(error.message || 'No se pudo guardar la tarea en Supabase');
     } finally {
       mostrarCarga(false);
     }
   }
 
+  // Elimina una tarea concreta por su id.
   async function deleteTask(id) {
     if (!supabase) {
       alert('No hay conexión activa con Supabase.');
@@ -195,7 +271,7 @@
       const { error } = await supabase.from('tasks').delete().eq('id', id);
       if (error) throw error;
 
-      tasks = tasks.filter(task => task.id !== id);
+      state.tasks = state.tasks.filter(task => task.id !== id);
       renderTasks();
     } catch (error) {
       console.error('Error al borrar tarea:', error.message);
@@ -203,8 +279,9 @@
     }
   }
 
+  // Cambia el estado de completada/pending de una tarea.
   async function toggleTask(id) {
-    const task = tasks.find(item => item.id === id);
+    const task = state.tasks.find(item => item.id === id);
     if (!task) return;
 
     if (!supabase) {
@@ -221,7 +298,7 @@
 
       if (error) throw error;
 
-      tasks = tasks.map(item => item.id === id ? normalizarTarea({ ...item, ...data[0] }) : item);
+      state.tasks = state.tasks.map(item => item.id === id ? normalizarTarea({ ...item, ...data[0] }) : item);
       renderTasks();
     } catch (error) {
       console.error('Error al actualizar tarea:', error.message);
@@ -229,8 +306,9 @@
     }
   }
 
+  // Borra todas las tareas marcadas como completadas.
   async function clearCompletedTasks() {
-    const completedIds = tasks.filter(task => task.completed).map(task => task.id);
+    const completedIds = state.tasks.filter(task => task.completed).map(task => task.id);
 
     if (completedIds.length === 0) {
       renderTasks();
@@ -246,7 +324,7 @@
       const { error } = await supabase.from('tasks').delete().in('id', completedIds);
       if (error) throw error;
 
-      tasks = tasks.filter(task => !task.completed);
+      state.tasks = state.tasks.filter(task => !task.completed);
       renderTasks();
     } catch (error) {
       console.error('Error al limpiar tareas completadas:', error.message);
@@ -290,44 +368,63 @@
     }
   }
 
+  // Enlaza los eventos de la interfaz con las funciones de la app.
+  function bindEvents() {
+    if (elements.addButton) {
+      elements.addButton.addEventListener('click', async () => {
+        const text = elements.taskInput ? elements.taskInput.value.trim() : '';
 
-  if (addButton) {
-    addButton.addEventListener('click', async () => {
-      const text = taskInput.value.trim();
-      if (!text) {
-        alert('Escribe una tarea primero');
-        return;
-      }
+        if (!text) {
+          alert('Escribe una tarea primero');
+          return;
+        }
 
-      await addTask(text);
-      taskInput.value = '';
-      taskInput.focus();
-    });
-  }
+        await addTask(text);
 
-  if (taskInput) {
-    taskInput.addEventListener('keypress', (event) => {
-      if (event.key === 'Enter') addButton.click();
-    });
-  }
+        if (elements.taskInput) {
+          elements.taskInput.value = '';
+          elements.taskInput.focus();
+        }
+      });
+    }
 
-    if (searchInput) {
-      searchInput.addEventListener('input', () => {
+    if (elements.taskInput) {
+      elements.taskInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter' && elements.addButton) {
+          elements.addButton.click();
+        }
+      });
+    }
+
+    if (elements.searchInput) {
+      elements.searchInput.addEventListener('input', () => {
         renderTasks();
       });
     }
 
+    if (elements.filterSelect) {
+      elements.filterSelect.addEventListener('change', (event) => {
+        state.filter = event.target.value;
+        renderTasks();
+      });
+    }
 
-  if (clearCompletedButton) {
-    clearCompletedButton.addEventListener('click', async () => {
-      await clearCompletedTasks();
-    });
+    if (elements.clearCompletedButton) {
+      elements.clearCompletedButton.addEventListener('click', async () => {
+        await clearCompletedTasks();
+      });
+    }
   }
 
-  if (supabase) {
-    getTasksFromSupabase();
-  } else {
-    mostrarError('No se ha podido conectar con Supabase. Revisa la URL y la anon key.');
+  // Inicializa la app y carga las tareas desde Supabase si está disponible.
+  function init() {
+    bindEvents();
+
+    if (supabase) {
+      getTasksFromSupabase();
+    } else {
+      mostrarError('No se ha podido conectar con Supabase. Revisa la URL y la anon key.');
+    }
   }
 
   window.obtenerNombresDeUsuarios = obtenerNombresDeUsuarios;
@@ -337,4 +434,8 @@
   window.deleteTask = deleteTask;
   window.toggleTask = toggleTask;
   window.clearCompletedTasks = clearCompletedTasks;
+  window.taskLogs = state.logs;
+  window.registrarLog = registrarLog;
+
+  init();
 })();

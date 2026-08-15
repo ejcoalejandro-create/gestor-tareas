@@ -9,12 +9,14 @@
 
 <body>
 
+    <!-- Encabezado principal de la aplicación -->
     <header>
         <h1>📝 Mis Tareas</h1>
     </header>
 
     <main>
 
+        <!-- Formulario para crear nuevas tareas -->
         <section class="add-task">
             <input type="text" id="taskInput" placeholder="Escribe una tarea...">
             <select id="taskPriority" aria-label="Prioridad de la tarea">
@@ -25,10 +27,12 @@
             <button id="addButton">Añadir</button>
         </section>
 
+        <!-- Buscador para filtrar tareas por texto -->
         <div class="toolbar">
             <input type="text" id="searchInput" placeholder="Buscar tareas..." aria-label="Buscar tareas">
         </div>
 
+        <!-- Sección donde se muestran las tareas y sus filtros -->
         <section class="task-list">
             <div class="task-list-header">
                 <h2>Tareas pendientes</h2>
@@ -50,9 +54,12 @@
 
     </main>
 
+    <!-- Pie de página del proyecto -->
     <footer>
         <p>Creado con ayuda de IA 🤖</p>
     </footer>
+
+    <!-- Carga de librerías externas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
 

@@ -176,30 +176,35 @@ main {
 }
 
 .stats-panel {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(80px, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 18px 0;
 }
 
 .stat-card {
-  background: #f1f7f1;
-  border: 1px solid #dfe9df;
-  border-radius: 12px;
-  padding: 12px 10px;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  text-align: left;
 }
 
 .stat-card span {
-  display: block;
-  color: #5a665a;
-  font-size: 0.72rem;
-  margin-bottom: 6px;
+  display: inline;
+  color: #1f2a1f;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 .stat-card strong {
-  font-size: 1.35rem;
+  font-size: 1.05rem;
   color: #1e2b1e;
+  font-weight: 700;
 }
 
 .stat-card.pending strong {

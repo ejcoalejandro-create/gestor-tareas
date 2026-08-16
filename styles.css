@@ -50,23 +50,32 @@ main {
 }
 
 #taskPriority,
+#taskDate,
 #searchInput {
   padding: 11px 12px;
   border: 2px solid #dfe7df;
   border-radius: 10px;
   font-size: 15px;
   background: #f9fbf9;
+  color: #1f2a1f;
 }
 
 #taskPriority {
   min-width: 110px;
 }
 
+#taskDate {
+  min-width: 150px;
+  cursor: pointer;
+}
+
 #taskInput:focus,
 #taskPriority:focus,
+#taskDate:focus,
 #searchInput:focus {
   outline: none;
   border-color: #3a9c5e;
+  box-shadow: 0 0 0 3px rgba(58, 156, 94, 0.12);
 }
 
 .toolbar {
@@ -235,10 +244,54 @@ main {
   border-radius: 10px;
 }
 
-#taskList li span {
+.task-main-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.task-main-content span {
   flex: 1;
   cursor: pointer;
   color: #273027;
+}
+
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-edit-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.task-edit-text,
+.task-edit-select,
+.task-edit-date {
+  padding: 8px 10px;
+  border: 2px solid #dfe7df;
+  border-radius: 8px;
+  background: #f9fbf9;
+  color: #1f2a1f;
+  font-size: 14px;
+}
+
+.task-edit-text {
+  flex: 1;
+  min-width: 140px;
+}
+
+.task-edit-select:focus,
+.task-edit-date:focus,
+.task-edit-text:focus {
+  outline: none;
+  border-color: #3a9c5e;
 }
 
 .priority-badge {
@@ -286,11 +339,41 @@ main {
   border-radius: 10px;
 }
 
-.delete-btn {
-  background: #e74c3c;
+.edit-btn,
+.delete-btn,
+.save-btn,
+.cancel-btn {
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.2s ease;
   color: white;
   padding: 8px 10px;
   font-size: 14px;
+}
+
+.edit-btn {
+  background: #f4c95d;
+  color: #4a3900;
+}
+
+.delete-btn {
+  background: #e74c3c;
+}
+
+.save-btn {
+  background: #2e9d5b;
+}
+
+.cancel-btn {
+  background: #7d8c8d;
+}
+
+.edit-btn:hover,
+.delete-btn:hover,
+.save-btn:hover,
+.cancel-btn:hover {
+  transform: translateY(-1px);
 }
 
 footer {

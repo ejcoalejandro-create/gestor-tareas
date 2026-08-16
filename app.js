@@ -6,7 +6,8 @@
   const state = {
     tasks: [],
     filter: 'all',
-    logs: []
+    logs: [],
+    editingTaskId: null
   };
 
   // Cliente de Supabase para leer y guardar tareas.
@@ -21,6 +22,7 @@
     filterSelect: document.getElementById('filterSelect'),
     searchInput: document.getElementById('searchInput'),
     taskPriority: document.getElementById('taskPriority'),
+    taskDate: document.getElementById('taskDate'),
     exportCsvBtn: document.getElementById('exportCsvBtn'),
     statTotal: document.getElementById('statTotal'),
     statPending: document.getElementById('statPending'),
@@ -89,18 +91,28 @@
 
   // Formatea las fechas para mostrarlas en el usuario en formato local.
   function formatearFecha(fecha) {
-    if (!fecha) return new Date().toLocaleString('es-ES');
-    return new Date(fecha).toLocaleString('es-ES');
+    if (!fecha) return 'Sin fecha';
+
+    const fechaValor = typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)
+      ? `${fecha}T12:00:00`
+      : fecha;
+
+    const parsed = new Date(fechaValor);
+    if (Number.isNaN(parsed.getTime())) return 'Sin fecha';
+    return parsed.toLocaleDateString('es-ES');
   }
 
   // Normaliza los datos que llegan de Supabase para que siempre tengan la misma estructura.
   function normalizarTarea(task) {
+    const fechaCuandoHacerla = task.cuando_Hacerla || task.cuando_hacerla || task.when_to_do || null;
+
     return {
       ...task,
       id: task.id,
       text: task.text || task.title || 'Tarea sin título',
       completed: Boolean(task.completed),
       priority: task.priority || 'media',
+      cuando_Hacerla: fechaCuandoHacerla,
       created_at: task.created_at || task.createdAt || new Date().toISOString(),
       createdAt: task.created_at || task.createdAt || new Date().toISOString()
     };
@@ -109,6 +121,16 @@
   // Devuelve la prioridad elegida en el selector del formulario.
   function getPriorityValue() {
     return elements.taskPriority ? elements.taskPriority.value : 'media';
+  }
+
+  function getTaskDateValue() {
+    if (!elements.taskDate) return null;
+    const value = elements.taskDate.value.trim();
+    return value || null;
+  }
+
+  function getTaskDate(task) {
+    return task?.cuando_Hacerla || task?.cuando_hacerla || task?.when_to_do || null;
   }
 
   // Actualiza el texto con el número de tareas pendientes y los indicadores de estadística.
@@ -147,6 +169,17 @@
       tareasFiltradas = tareasFiltradas.filter(task => task.text.toLowerCase().includes(busqueda));
     }
 
+    tareasFiltradas.sort((a, b) => {
+      const fechaA = getTaskDate(a);
+      const fechaB = getTaskDate(b);
+
+      if (!fechaA && !fechaB) return 0;
+      if (!fechaA) return 1;
+      if (!fechaB) return -1;
+
+      return new Date(fechaA) - new Date(fechaB);
+    });
+
     return tareasFiltradas;
   }
 
@@ -170,39 +203,64 @@
 
     filteredTasks.forEach(task => {
       const li = document.createElement('li');
+      const content = document.createElement('div');
       const span = document.createElement('span');
+      const actions = document.createElement('div');
+      const editBtn = document.createElement('button');
       const deleteBtn = document.createElement('button');
       const time = document.createElement('small');
       const priorityTag = document.createElement('span');
 
+      content.className = 'task-main-content';
+      actions.className = 'task-actions';
+
       span.textContent = task.text;
       priorityTag.textContent = task.priority || 'media';
       priorityTag.className = `priority-badge priority-${task.priority || 'media'}`;
-      time.textContent = formatearFecha(task.created_at || task.createdAt);
+      const fechaTarea = getTaskDate(task);
+      time.textContent = fechaTarea ? `📅 ${formatearFecha(fechaTarea)}` : '📅 Sin fecha';
       time.className = 'task-time';
 
       if (task.completed) li.classList.add('completed');
 
       span.addEventListener('click', () => toggleTask(task.id));
 
+      editBtn.textContent = '✏️';
+      editBtn.className = 'edit-btn';
+      editBtn.title = 'Editar tarea';
+      editBtn.addEventListener('click', () => {
+        state.editingTaskId = task.id;
+        if (elements.taskInput) elements.taskInput.value = task.text || '';
+        if (elements.taskPriority) elements.taskPriority.value = task.priority || 'media';
+        if (elements.taskDate) elements.taskDate.value = fechaTarea || '';
+        if (elements.addButton) elements.addButton.textContent = 'Guardar cambios';
+        elements.taskInput?.focus();
+      });
+
       deleteBtn.textContent = '🗑️';
       deleteBtn.className = 'delete-btn';
+      deleteBtn.title = 'Eliminar tarea';
       deleteBtn.addEventListener('click', () => deleteTask(task.id));
 
-      li.appendChild(priorityTag);
-      li.appendChild(span);
-      li.appendChild(time);
-      li.appendChild(deleteBtn);
+      content.appendChild(priorityTag);
+      content.appendChild(span);
+      content.appendChild(time);
+      li.appendChild(content);
+
+      actions.appendChild(editBtn);
+      actions.appendChild(deleteBtn);
+      li.appendChild(actions);
       elements.taskList.appendChild(li);
     });
   }
 
   // Prepara el objeto que se enviará a Supabase cuando se cree una nueva tarea.
-  function crearPayloadTarea(texto, prioridad) {
+  function crearPayloadTarea(texto, prioridad, fecha) {
     return {
       text: texto,
       completed: false,
       priority: prioridad,
+      cuando_Hacerla: fecha || null,
       created_at: new Date().toISOString()
     };
   }
@@ -295,7 +353,8 @@
     registrarLog('add_task_start', { text: value, priority: priorityValue });
 
     try {
-      const payload = crearPayloadTarea(value, priorityValue);
+      const taskDateValue = getTaskDateValue();
+      const payload = crearPayloadTarea(value, priorityValue, taskDateValue);
       const result = await supabase
         .from('tasks')
         .insert([payload])
@@ -314,7 +373,7 @@
 
       const insertedTask = result.data && result.data[0] ? result.data[0] : payload;
       state.tasks = [normalizarTarea(insertedTask), ...state.tasks];
-      registrarLog('add_task_success', { id: insertedTask.id, priority: insertedTask.priority || priorityValue }, { saved: insertedTask });
+      registrarLog('add_task_success', { id: insertedTask.id, priority: insertedTask.priority || priorityValue, cuando_Hacerla: insertedTask.cuando_Hacerla || taskDateValue }, { saved: insertedTask });
       renderTasks();
     } catch (error) {
       console.error('Error al añadir tarea en Supabase:', error.message);
@@ -322,6 +381,55 @@
       mostrarError(error.message || 'No se pudo guardar la tarea en Supabase');
     } finally {
       mostrarCarga(false);
+    }
+  }
+
+  function resetTaskForm() {
+    state.editingTaskId = null;
+
+    if (elements.taskInput) elements.taskInput.value = '';
+    if (elements.taskPriority) elements.taskPriority.value = 'media';
+    if (elements.taskDate) elements.taskDate.value = '';
+    if (elements.addButton) elements.addButton.textContent = 'Añadir';
+  }
+
+  async function updateTask(id, cambios) {
+    const task = state.tasks.find(item => item.id === id);
+    if (!task) return;
+
+    if (!supabase) {
+      alert('No hay conexión activa con Supabase.');
+      return;
+    }
+
+    const nuevoTexto = (cambios.text ?? task.text).trim();
+    if (!nuevoTexto) {
+      mostrarError('La tarea no puede quedar vacía.');
+      return;
+    }
+
+    const payload = {
+      text: nuevoTexto,
+      priority: cambios.priority ?? task.priority ?? 'media',
+      cuando_Hacerla: Object.prototype.hasOwnProperty.call(cambios, 'cuando_Hacerla') ? (cambios.cuando_Hacerla || null) : getTaskDate(task)
+    };
+
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(payload)
+        .eq('id', id)
+        .select();
+
+      if (error) throw error;
+
+      const updatedTask = data && data[0] ? data[0] : { ...task, ...payload };
+      state.tasks = state.tasks.map(item => item.id === id ? normalizarTarea({ ...item, ...updatedTask, ...payload }) : item);
+      resetTaskForm();
+      renderTasks();
+    } catch (error) {
+      console.error('Error al actualizar tarea:', error.message);
+      mostrarError('No se pudo actualizar la tarea');
     }
   }
 
@@ -437,6 +545,24 @@
   function bindEvents() {
     if (elements.addButton) {
       elements.addButton.addEventListener('click', async () => {
+        if (state.editingTaskId !== null) {
+          const text = elements.taskInput ? elements.taskInput.value.trim() : '';
+
+          if (!text) {
+            alert('Escribe una tarea primero');
+            return;
+          }
+
+          await updateTask(state.editingTaskId, {
+            text,
+            priority: getPriorityValue(),
+            cuando_Hacerla: getTaskDateValue()
+          });
+
+          resetTaskForm();
+          return;
+        }
+
         const text = elements.taskInput ? elements.taskInput.value.trim() : '';
 
         if (!text) {
@@ -449,6 +575,10 @@
         if (elements.taskInput) {
           elements.taskInput.value = '';
           elements.taskInput.focus();
+        }
+
+        if (elements.taskDate) {
+          elements.taskDate.value = '';
         }
       });
     }
@@ -502,6 +632,7 @@
   window.crearTareaEnAPI = crearTareaEnAPI;
   window.getTasksFromSupabase = getTasksFromSupabase;
   window.addTask = addTask;
+  window.updateTask = updateTask;
   window.deleteTask = deleteTask;
   window.toggleTask = toggleTask;
   window.clearCompletedTasks = clearCompletedTasks;

@@ -1,6 +1,7 @@
 (() => {
   const SUPABASE_URL = 'https://qdierydswmebuwwvmywa.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_oVJi9Pn-dW197ySIcdtcQg_YI_jOEkF';
+  const MAKE_WEBHOOK_URL = 'https://hook.make.com/TU_WEBHOOK';
 
   // Estado global de la app: tareas actuales, filtro activo y registro de eventos.
   const state = {
@@ -202,6 +203,53 @@
     return elements.taskPriority
       ? elements.taskPriority.value
       : 'media';
+  }
+
+  async function dispararWebhookMake(accion, tarea) {
+    if (
+      !MAKE_WEBHOOK_URL ||
+      MAKE_WEBHOOK_URL.includes('TU_WEBHOOK')
+    ) {
+      return false;
+    }
+
+    try {
+      const response = await fetch(
+        MAKE_WEBHOOK_URL,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            accion,
+            tarea,
+            timestamp: new Date().toISOString()
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `HTTP ${response.status}`
+        );
+      }
+
+      console.log(
+        '[Make] Webhook disparado:',
+        accion,
+        tarea?.id || '(sin id)'
+      );
+
+      return true;
+    } catch (error) {
+      console.warn(
+        '[Make] No se pudo disparar el webhook:',
+        error.message
+      );
+
+      return false;
+    }
   }
 
   /*
@@ -721,6 +769,11 @@
         ...state.tasks
       ];
 
+      await dispararWebhookMake(
+        'create',
+        normalizarTarea(insertedTask)
+      );
+
       registrarLog(
         'add_task_success',
         {
@@ -867,6 +920,15 @@
               })
             : item
         );
+
+      await dispararWebhookMake(
+        'update',
+        normalizarTarea({
+          ...task,
+          ...payload,
+          ...updatedTask
+        })
+      );
 
       resetTaskForm();
       renderTasks();

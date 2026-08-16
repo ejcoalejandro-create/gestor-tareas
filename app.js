@@ -280,12 +280,13 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    const columnas = ['ID', 'Tarea', 'Estado', 'Prioridad', 'Fecha'];
+    const columnas = ['ID', 'Tarea', 'Estado', 'Prioridad', 'Cuando_Hacerla', 'Fecha de creación'];
     const filas = state.tasks.map(task => [
       String(task.id ?? ''),
       String(task.text ?? ''),
       task.completed ? 'Completada' : 'Pendiente',
       String(task.priority ?? 'media'),
+      String(getTaskDate(task) ? formatearFecha(getTaskDate(task)) : 'Sin fecha'),
       String(task.created_at || task.createdAt || '')
     ]);
 

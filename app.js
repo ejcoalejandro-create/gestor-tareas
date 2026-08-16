@@ -1,6 +1,6 @@
 (() => {
   const SUPABASE_URL = 'https://qdierydswmebuwwvmywa.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkaWVyeWRzd21lYnV3d3ZteXdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0ODgzMzAsImV4cCI6MjEwMjA2NDMzMH0.W7YgaAWMuqSlEXpuvjRqYU7hFMaCqVTHK-klttNex1s';
+  const SUPABASE_ANON_KEY = 'sb_publishable_oVJi9Pn-dW197ySIcdtcQg_YI_jOEkF';
 
   // Estado global de la app: tareas actuales, filtro activo y registro de eventos.
   const state = {
@@ -25,7 +25,6 @@
     searchInput: document.getElementById('searchInput'),
     taskPriority: document.getElementById('taskPriority'),
     taskDate: document.getElementById('taskDate'),
-    taskTime: document.getElementById('taskTime'),
     exportCsvBtn: document.getElementById('exportCsvBtn'),
     statTotal: document.getElementById('statTotal'),
     statPending: document.getElementById('statPending'),
@@ -123,21 +122,25 @@
     return parsed.toLocaleDateString('es-ES');
   }
 
-  function formatearFechaParaInput(fecha) {
-    if (!fecha) return '';
+  function formatearFechaHora(fecha) {
+    if (!fecha) return 'Sin fecha';
 
     const parsed = new Date(fecha);
 
     if (Number.isNaN(parsed.getTime())) {
-      return '';
+      return 'Sin fecha';
     }
 
-    const pad = numero => String(numero).padStart(2, '0');
-
-    return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`;
+    return parsed.toLocaleString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
-  function formatearHoraParaInput(fecha) {
+  function formatearFechaHoraParaInput(fecha) {
     if (!fecha) return '';
 
     const parsed = new Date(fecha);
@@ -148,22 +151,20 @@
 
     const pad = numero => String(numero).padStart(2, '0');
 
-    return `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+    return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
   }
 
   function getTaskDateValue() {
     if (!elements.taskDate) return null;
 
-    const fecha = elements.taskDate.value.trim();
-    const hora = elements.taskTime && elements.taskTime.value.trim();
+    const value = elements.taskDate.value.trim();
 
-    if (!fecha) return null;
+    if (!value) return null;
 
-    const fechaHora = hora ? `${fecha}T${hora}` : `${fecha}T00:00`;
-    const date = new Date(fechaHora);
+    const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-      console.warn('Fecha/hora no válida:', fechaHora);
+      console.warn('Fecha/hora no válida:', value);
       return null;
     }
 
@@ -352,7 +353,7 @@
       const fechaTarea = getTaskDate(task);
 
       time.textContent = fechaTarea
-        ? `📅 ${formatearFecha(fechaTarea)}`
+        ? `📅 ${formatearFechaHora(fechaTarea)}`
         : '📅 Sin fecha';
 
       time.className = 'task-time';
@@ -389,12 +390,7 @@
          */
         if (elements.taskDate) {
           elements.taskDate.value =
-            formatearFechaParaInput(fechaTarea);
-        }
-
-        if (elements.taskTime) {
-          elements.taskTime.value =
-            formatearHoraParaInput(fechaTarea);
+            formatearFechaHoraParaInput(fechaTarea);
         }
 
         if (elements.addButton) {
@@ -478,7 +474,7 @@
       String(task.priority ?? 'media'),
       String(
         getTaskDate(task)
-          ? formatearFecha(getTaskDate(task))
+          ? formatearFechaHora(getTaskDate(task))
           : 'Sin fecha'
       ),
       String(
@@ -581,21 +577,33 @@
 
       renderTasks();
     } catch (error) {
+      const errorMessage =
+        error && error.message
+          ? error.message
+          : 'Error desconocido al cargar tareas desde Supabase';
+
       console.error(
         'Error al cargar tareas desde Supabase:',
-        error.message
+        error
       );
 
       registrarLog(
         'load_tasks_error',
         {
-          message: error.message
+          message: errorMessage,
+          details: error && error.details ? error.details : null,
+          code: error && error.code ? error.code : null
         }
       );
 
-      mostrarError(
-        'No se pudieron cargar tareas desde Supabase'
-      );
+      const mensajeMostrado =
+        /row-level security|permission denied|RLS/i.test(
+          errorMessage
+        )
+          ? 'Supabase está bloqueando la lectura por políticas RLS. Revisa la política SELECT de la tabla tasks.'
+          : errorMessage;
+
+      mostrarError(mensajeMostrado);
     }
   }
 
@@ -772,10 +780,6 @@
 
     if (elements.taskDate) {
       elements.taskDate.value = '';
-    }
-
-    if (elements.taskTime) {
-      elements.taskTime.value = '';
     }
 
     if (elements.addButton) {

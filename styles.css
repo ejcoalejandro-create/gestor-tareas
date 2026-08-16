@@ -35,13 +35,16 @@ main {
 
 .add-task {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 20px;
   align-items: center;
+  width: 100%;
 }
 
 #taskInput {
-  flex: 1;
+  flex: 1 1 220px;
+  min-width: 0;
   padding: 12px 14px;
   border: 2px solid #dfe7df;
   border-radius: 10px;
@@ -61,12 +64,19 @@ main {
 }
 
 #taskPriority {
+  flex: 0 0 110px;
   min-width: 110px;
 }
 
 #taskDate {
-  min-width: 150px;
+  flex: 1 1 210px;
+  min-width: 210px;
   cursor: pointer;
+}
+
+#addButton {
+  flex: 0 0 auto;
+  min-width: 128px;
 }
 
 #taskInput:focus,

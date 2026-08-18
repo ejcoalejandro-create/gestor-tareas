@@ -1,4 +1,29 @@
+/*
+ * ============================================================
+ *  TAREAS FAMILIA — app.js
+ * ============================================================
+ * Gestor de tareas familiar. Las tareas se guardan en una tabla
+ * "tasks" de Supabase (base de datos en la nube) y cada una tiene
+ * un usuario asignado (Filippa, Micaela o Marcos).
+ *
+ * Estructura del archivo (de arriba hacia abajo):
+ *   1. Configuración (URLs, claves) y estado global de la app.
+ *   2. Registro de eventos (logs) y avisos de error en pantalla.
+ *   3. Utilidades de fecha (formatear, convertir para inputs, etc).
+ *   4. Estadísticas y renderizado de la lista de tareas en el DOM.
+ *   5. Operaciones CRUD contra Supabase (crear, leer, actualizar,
+ *      borrar tareas) y exportación a PDF.
+ *   6. Conexión de eventos de la interfaz (bindEvents) e inicio
+ *      de la aplicación (init).
+ *
+ * Todo el código vive dentro de una IIFE (función que se ejecuta
+ * inmediatamente) para no contaminar el ámbito global del navegador;
+ * solo se exponen a `window` las funciones que se necesitan usar
+ * desde fuera (por ejemplo, para probarlas desde la consola).
+ * ============================================================
+ */
 (() => {
+  // ---- Configuración: credenciales de Supabase y webhook externo ----
   const SUPABASE_URL = 'https://qdierydswmebuwwvmywa.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_oVJi9Pn-dW197ySIcdtcQg_YI_jOEkF';
   const MAKE_WEBHOOK_URL = 'https://hook.make.com/TU_WEBHOOK';
@@ -26,11 +51,19 @@
     searchInput: document.getElementById('searchInput'),
     taskPriority: document.getElementById('taskPriority'),
     taskDate: document.getElementById('taskDate'),
+    taskDateStart: document.getElementById('taskDateStart'),
+    taskDateEnd: document.getElementById('taskDateEnd'),
+    taskFrequency: document.getElementById('taskFrequency'),
+    taskTypeRadios: document.querySelectorAll('input[name="taskType"]'),
+    singleTaskFields: document.getElementById('singleTaskFields'),
+    repetitiveTaskFields: document.getElementById('repetitiveTaskFields'),
     exportCsvBtn: document.getElementById('exportCsvBtn'),
     statTotal: document.getElementById('statTotal'),
     statPending: document.getElementById('statPending'),
     statCompleted: document.getElementById('statCompleted'),
-    statHighPriority: document.getElementById('statHighPriority')
+    statHighPriority: document.getElementById('statHighPriority'),
+    statFilippa: document.getElementById('statFilippa'),
+    statMicaela: document.getElementById('statMicaela')
   };
 
   // Guarda eventos en la consola y, si existe, también en la tabla task_logs de Supabase.
@@ -103,6 +136,8 @@
       ? 'Añadiendo...'
       : 'Añadir';
   }
+
+  // ==================== UTILIDADES DE FECHA ====================
 
   // Formatea las fechas para mostrarlas al usuario en formato local.
   function formatearFecha(fecha) {
@@ -185,7 +220,7 @@
       id: task.id,
       text: task.text || task.title || 'Tarea sin título',
       completed: Boolean(task.completed),
-      priority: task.priority || 'media',
+      usuarios: task.usuarios || 'micaela',
       cuando_Hacerla: fechaCuandoHacerla,
       created_at:
         task.created_at ||
@@ -198,11 +233,51 @@
     };
   }
 
-  // Devuelve la prioridad elegida en el selector del formulario.
-  function getPriorityValue() {
+  // Devuelve el usuario elegido en el selector del formulario.
+  function getUserValue() {
     return elements.taskPriority
       ? elements.taskPriority.value
-      : 'media';
+      : 'micaela';
+  }
+
+  // Obtiene el tipo de tarea seleccionado (única o repetitiva)
+  function getTaskType() {
+    const checked = Array.from(elements.taskTypeRadios || [])
+      .find(radio => radio.checked);
+    return checked ? checked.value : 'single';
+  }
+
+  // Genera un rango de fechas basado en frecuencia
+  function generarFechasRepetitivas(fechaInicio, fechaFin, frecuencia) {
+    const fechas = [];
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    let actual = new Date(inicio);
+
+    let incrementoDias = 1;
+    switch (frecuencia) {
+      case 'daily':
+        incrementoDias = 1;
+        break;
+      case 'weekly':
+        incrementoDias = 7;
+        break;
+      case 'biweekly':
+        incrementoDias = 15;
+        break;
+      case 'monthly':
+        incrementoDias = 30;
+        break;
+      default:
+        incrementoDias = 1;
+    }
+
+    while (actual <= fin) {
+      fechas.push(new Date(actual).toISOString());
+      actual.setDate(actual.getDate() + incrementoDias);
+    }
+
+    return fechas;
   }
 
   async function dispararWebhookMake(accion, tarea) {
@@ -269,7 +344,33 @@
     );
   }
 
-  // Actualiza el texto con el número de tareas pendientes y los indicadores de estadística.
+  // ==================== ESTADÍSTICAS Y RENDERIZADO ====================
+
+  /*
+   * Cuenta cuántas tareas ACTIVAS (no completadas) tiene asignadas
+   * un usuario concreto. Se usa para las tarjetas "Tareas de Filippa",
+   * "Tareas de Micaela" y "Tareas de Marcos" del panel de estadísticas.
+   *
+   * Se cuentan solo las pendientes (y no el total) porque lo que le
+   * interesa a la familia es "cuánto le queda por hacer a cada uno",
+   * no cuántas tareas acumuló históricamente.
+   */
+  function contarTareasActivasPorUsuario(usuario) {
+    return state.tasks.filter(
+      task => !task.completed && task.usuarios === usuario
+    ).length;
+  }
+
+  /*
+   * Actualiza el panel de estadísticas (arriba de la lista de tareas):
+   * - Total de tareas (completadas + pendientes)
+   * - Pendientes / Completadas en general
+   * - Pendientes por cada usuario: Filippa, Micaela y Marcos
+   *
+   * Se llama cada vez que cambia el estado de las tareas (al cargar,
+   * añadir, editar, borrar o marcar como completada), así el panel
+   * siempre refleja el estado actual de `state.tasks`.
+   */
   function updateTaskCounter() {
     const total = state.tasks.length;
 
@@ -283,9 +384,10 @@
       task => task.completed
     ).length;
 
-    const altas = tareasActivas.filter(
-      task => task.priority === 'alta'
-    ).length;
+    // Pendientes por usuario, reutilizando la misma lógica para los tres.
+    const pendientesFilippa = contarTareasActivasPorUsuario('filippa');
+    const pendientesMicaela = contarTareasActivasPorUsuario('micaela');
+    const pendientesMarcos = contarTareasActivasPorUsuario('marcos');
 
     if (elements.statPending) {
       elements.statPending.textContent = `${pendientes}`;
@@ -299,8 +401,16 @@
       elements.statCompleted.textContent = String(completadas);
     }
 
+    if (elements.statFilippa) {
+      elements.statFilippa.textContent = String(pendientesFilippa);
+    }
+
+    if (elements.statMicaela) {
+      elements.statMicaela.textContent = String(pendientesMicaela);
+    }
+
     if (elements.statHighPriority) {
-      elements.statHighPriority.textContent = String(altas);
+      elements.statHighPriority.textContent = String(pendientesMarcos);
     }
 
     if (elements.taskCounter) {
@@ -393,10 +503,10 @@
       span.textContent = task.text;
 
       priorityTag.textContent =
-        task.priority || 'media';
+        task.usuarios || 'micaela';
 
       priorityTag.className =
-        `priority-badge priority-${task.priority || 'media'}`;
+        `priority-badge priority-${task.usuarios || 'micaela'}`;
 
       const fechaTarea = getTaskDate(task);
 
@@ -428,7 +538,7 @@
 
         if (elements.taskPriority) {
           elements.taskPriority.value =
-            task.priority || 'media';
+            task.usuarios || 'micaela';
         }
 
         /*
@@ -473,11 +583,11 @@
   }
 
   // Prepara el objeto que se enviará a Supabase cuando se cree una nueva tarea.
-  function crearPayloadTarea(texto, prioridad, fecha) {
+  function crearPayloadTarea(texto, usuario, fecha) {
     return {
       text: texto,
       completed: false,
-      priority: prioridad,
+      usuarios: usuario,
       cuando_Hacerla: fecha || null,
       created_at: new Date().toISOString()
     };
@@ -519,7 +629,7 @@
       task.completed
         ? 'Completada'
         : 'Pendiente',
-      String(task.priority ?? 'media'),
+      String(task.usuarios ?? 'micaela'),
       String(
         getTaskDate(task)
           ? formatearFechaHora(getTaskDate(task))
@@ -572,6 +682,8 @@
   function exportarCSV() {
     return exportarPDF();
   }
+
+  // ==================== OPERACIONES CRUD (SUPABASE) ====================
 
   // Carga todas las tareas existentes desde la tabla tasks.
   async function getTasksFromSupabase() {
@@ -655,7 +767,7 @@
     }
   }
 
-  // Inserta una nueva tarea en Supabase y la añade al estado local para re-renderizar la vista.
+  // Inserta una o múltiples tareas en Supabase según si es repetitiva o no
   async function addTask(text) {
     const value = text.trim();
 
@@ -669,63 +781,106 @@
       return;
     }
 
-    const priorityValue =
-      getPriorityValue();
+    const userValue =
+      getUserValue();
 
-    mostrarCarga(true);
+    const taskType = getTaskType();
+    let payloads = [];
 
-    registrarLog(
-      'add_task_start',
-      {
-        text: value,
-        priority: priorityValue
+    // Validar y construir payloads según el tipo de tarea
+    if (taskType === 'repetitive') {
+      if (!elements.taskDateStart || !elements.taskDateStart.value) {
+        mostrarError('Selecciona una fecha de inicio para tareas repetitivas');
+        return;
       }
-    );
+      if (!elements.taskDateEnd || !elements.taskDateEnd.value) {
+        mostrarError('Selecciona una fecha de fin para tareas repetitivas');
+        return;
+      }
 
-    try {
-      /*
-       * AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL.
-       *
-       * getTaskDateValue() devuelve ahora:
-       *
-       * 2026-08-20T16:30:00.000Z
-       *
-       * si el usuario seleccionó:
-       *
-       * 20/08/2026 18:30
-       *
-       * en Madrid.
-       */
+      const frecuencia = elements.taskFrequency
+        ? elements.taskFrequency.value
+        : 'daily';
+
+      const fechaInicio = elements.taskDateStart.value;
+      const fechaFin = elements.taskDateEnd.value;
+
+      if (new Date(fechaInicio) > new Date(fechaFin)) {
+        mostrarError('La fecha de inicio no puede ser posterior a la fecha de fin');
+        return;
+      }
+
+      const fechasGeneradas = generarFechasRepetitivas(
+        fechaInicio,
+        fechaFin,
+        frecuencia
+      );
+
+      if (fechasGeneradas.length > 50) {
+        mostrarError(
+          `Se crearían ${fechasGeneradas.length} tareas. Máximo permitido: 50. Ajusta el rango o frecuencia.`
+        );
+        return;
+      }
+
+      payloads = fechasGeneradas.map(fecha =>
+        crearPayloadTarea(value, userValue, fecha)
+      );
+
+      registrarLog(
+        'add_repetitive_task_start',
+        {
+          text: value,
+          usuarios: userValue,
+          frecuencia: frecuencia,
+          count: payloads.length
+        }
+      );
+    } else {
+      // Tarea única
       const taskDateValue =
         getTaskDateValueForPayload();
 
-      const payload =
+      payloads = [
         crearPayloadTarea(
           value,
-          priorityValue,
+          userValue,
           taskDateValue
-        );
+        )
+      ];
 
+      registrarLog(
+        'add_task_start',
+        {
+          text: value,
+          usuarios: userValue
+        }
+      );
+    }
+
+    mostrarCarga(true);
+
+    try {
       console.log(
-        '[Task] Payload que se enviará a Supabase:',
-        payload
+        '[Task] Payloads que se enviarán a Supabase:',
+        payloads
       );
 
       const result =
         await supabase
           .from('tasks')
-          .insert([payload])
+          .insert(payloads)
           .select();
 
       if (result.error) {
         if (
-          /priority/.test(
+          /usuarios/.test(
             result.error.message
           )
         ) {
           const sqlError =
             new Error(
-              'Falta la columna priority en la tabla tasks. Ejecuta el SQL de Supabase indicado en la documentación.'
+              'Falta la columna usuarios en la tabla tasks. Ejecuta el SQL de Supabase indicado en la documentación.'
             );
 
           registrarLog(
@@ -733,10 +888,10 @@
             {
               message:
                 sqlError.message,
-              payload
+              payloads
             },
             {
-              request: payload
+              request: payloads
             }
           );
 
@@ -748,45 +903,40 @@
           {
             message:
               result.error.message,
-            payload
+            payloads
           },
           {
-            request: payload
+            request: payloads
           }
         );
 
         throw result.error;
       }
 
-      const insertedTask =
-        result.data &&
-        result.data[0]
-          ? result.data[0]
-          : payload;
+      const insertedTasks = result.data || payloads;
 
       state.tasks = [
-        normalizarTarea(insertedTask),
+        ...insertedTasks.map(normalizarTarea),
         ...state.tasks
       ];
 
-      await dispararWebhookMake(
-        'create',
-        normalizarTarea(insertedTask)
-      );
+      // Disparar webhook para cada tarea creada
+      for (const task of insertedTasks) {
+        await dispararWebhookMake(
+          'create',
+          normalizarTarea(task)
+        );
+      }
 
       registrarLog(
-        'add_task_success',
+        taskType === 'repetitive' ? 'add_repetitive_task_success' : 'add_task_success',
         {
-          id: insertedTask.id,
-          priority:
-            insertedTask.priority ||
-            priorityValue,
-          cuando_Hacerla:
-            insertedTask.cuando_Hacerla ||
-            taskDateValue
+          count: insertedTasks.length,
+          usuarios: userValue,
+          type: taskType
         },
         {
-          saved: insertedTask
+          saved: insertedTasks
         }
       );
 
@@ -801,12 +951,13 @@
         'add_task_failure',
         {
           message: error.message,
-          priority: priorityValue
+          usuarios: userValue,
+          type: taskType
         },
         {
           request: {
             text: value,
-            priority: priorityValue
+            usuarios: userValue
           }
         }
       );
@@ -828,11 +979,34 @@
     }
 
     if (elements.taskPriority) {
-      elements.taskPriority.value = 'media';
+      elements.taskPriority.value = 'micaela';
     }
 
     if (elements.taskDate) {
       elements.taskDate.value = '';
+    }
+
+    if (elements.taskDateStart) {
+      elements.taskDateStart.value = '';
+    }
+
+    if (elements.taskDateEnd) {
+      elements.taskDateEnd.value = '';
+    }
+
+    if (elements.taskFrequency) {
+      elements.taskFrequency.value = 'daily';
+    }
+
+    // Resetear a tarea única
+    if (elements.taskTypeRadios && elements.taskTypeRadios.length > 0) {
+      elements.taskTypeRadios[0].checked = true;
+      if (elements.singleTaskFields) {
+        elements.singleTaskFields.style.display = 'flex';
+      }
+      if (elements.repetitiveTaskFields) {
+        elements.repetitiveTaskFields.style.display = 'none';
+      }
     }
 
     if (elements.addButton) {
@@ -840,6 +1014,12 @@
     }
   }
 
+  /*
+   * Actualiza una tarea existente en Supabase y en el estado local.
+   * `cambios` es un objeto parcial: solo hace falta pasar las
+   * propiedades que cambian (texto, usuario y/o fecha), las demás
+   * se mantienen como estaban en la tarea original.
+   */
   async function updateTask(id, cambios) {
     const task = state.tasks.find(
       item => item.id === id
@@ -880,10 +1060,10 @@
 
     const payload = {
       text: nuevoTexto,
-      priority:
-        cambios.priority ??
-        task.priority ??
-        'media',
+      usuarios:
+        cambios.usuarios ??
+        task.usuarios ??
+        'micaela',
       cuando_Hacerla: nuevaFecha
     };
 
@@ -1034,6 +1214,12 @@
   }
 
   // Borra todas las tareas marcadas como completadas.
+  /*
+   * Borra de Supabase (y del estado local) todas las tareas que
+   * ya están marcadas como completadas. Si no hay ninguna, no hace
+   * falta llamar a la base de datos: simplemente se vuelve a
+   * renderizar la lista tal cual está.
+   */
   async function clearCompletedTasks() {
     const completedIds =
       state.tasks
@@ -1083,6 +1269,12 @@
     }
   }
 
+  /*
+   * Función de ejemplo/prueba: consulta una API pública (JSONPlaceholder)
+   * y devuelve solo los nombres de los usuarios de ejemplo. No forma
+   * parte del flujo principal de la app; se expone en `window` para
+   * poder probarla manualmente desde la consola del navegador.
+   */
   async function obtenerNombresDeUsuarios() {
     try {
       const response =
@@ -1114,6 +1306,12 @@
     }
   }
 
+  /*
+   * Función de ejemplo/prueba: envía un POST a una API pública
+   * (JSONPlaceholder) con una tarea de prueba. Al igual que
+   * `obtenerNombresDeUsuarios`, es solo para experimentar con
+   * peticiones HTTP y no afecta a las tareas reales de Supabase.
+   */
   async function crearTareaEnAPI() {
     const nuevaTarea = {
       userId: 1,
@@ -1156,6 +1354,8 @@
     }
   }
 
+  // ==================== EVENTOS E INICIALIZACIÓN ====================
+
   // Enlaza los eventos de la interfaz con las funciones de la app.
   function bindEvents() {
     if (elements.addButton) {
@@ -1182,8 +1382,8 @@
               state.editingTaskId,
               {
                 text,
-                priority:
-                  getPriorityValue(),
+                usuarios:
+                  getUserValue(),
                 /*
                  * Ahora esta función devuelve
                  * fecha + hora en ISO.
@@ -1275,6 +1475,31 @@
           exportarPDF();
         }
       );
+    }
+
+    // Event listeners para cambiar entre tareas únicas y repetitivas
+    if (elements.taskTypeRadios && elements.taskTypeRadios.length > 0) {
+      elements.taskTypeRadios.forEach(radio => {
+        radio.addEventListener('change', (event) => {
+          const taskType = event.target.value;
+          
+          if (taskType === 'single') {
+            if (elements.singleTaskFields) {
+              elements.singleTaskFields.style.display = 'flex';
+            }
+            if (elements.repetitiveTaskFields) {
+              elements.repetitiveTaskFields.style.display = 'none';
+            }
+          } else {
+            if (elements.singleTaskFields) {
+              elements.singleTaskFields.style.display = 'none';
+            }
+            if (elements.repetitiveTaskFields) {
+              elements.repetitiveTaskFields.style.display = 'flex';
+            }
+          }
+        });
+      });
     }
   }
 

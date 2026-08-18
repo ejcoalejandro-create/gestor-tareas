@@ -11,7 +11,7 @@
 
     <!-- Encabezado principal de la aplicación -->
     <header>
-        <h1>📝 Mis Tareas</h1>
+        <h1>📝 Tareas Familia</h1>
     </header>
 
     <main>
@@ -19,12 +19,39 @@
         <!-- Formulario para crear nuevas tareas -->
         <section class="add-task">
             <input type="text" id="taskInput" placeholder="Escribe una tarea...">
-            <select id="taskPriority" aria-label="Prioridad de la tarea">
-                <option value="baja">Baja</option>
-                <option value="media" selected>Media</option>
-                <option value="alta">Alta</option>
+            <select id="taskPriority" aria-label="Usuario asignado">
+                <option value="filippa">Filippa</option>
+                <option value="micaela" selected>Micaela</option>
+                <option value="marcos">Marcos</option>
             </select>
-            <input type="datetime-local" id="taskDate" aria-label="Fecha y hora para hacer la tarea">
+            
+            <!-- Selector para tarea única o repetitiva -->
+            <div class="task-type-selector">
+                <label>
+                    <input type="radio" name="taskType" value="single" checked> Única
+                </label>
+                <label>
+                    <input type="radio" name="taskType" value="repetitive"> Repetitiva
+                </label>
+            </div>
+            
+            <!-- Campos para tarea única -->
+            <div id="singleTaskFields" class="task-fields-group">
+                <input type="datetime-local" id="taskDate" aria-label="Fecha y hora para hacer la tarea">
+            </div>
+            
+            <!-- Campos para tarea repetitiva -->
+            <div id="repetitiveTaskFields" class="task-fields-group" style="display:none;">
+                <input type="date" id="taskDateStart" aria-label="Fecha de inicio" placeholder="Desde">
+                <input type="date" id="taskDateEnd" aria-label="Fecha de fin" placeholder="Hasta">
+                <select id="taskFrequency" aria-label="Frecuencia de repetición">
+                    <option value="daily">Diario</option>
+                    <option value="weekly">Semanal</option>
+                    <option value="biweekly">Cada 15 días</option>
+                    <option value="monthly">Mensual</option>
+                </select>
+            </div>
+            
             <button id="addButton">Añadir</button>
         </section>
 
@@ -61,8 +88,16 @@
                     <span>Completadas</span>
                     <strong id="statCompleted">0</strong>
                 </div>
+                <div class="stat-card user-filippa">
+                    <span>Tareas de Filippa</span>
+                    <strong id="statFilippa">0</strong>
+                </div>
+                <div class="stat-card user-micaela">
+                    <span>Tareas de Micaela</span>
+                    <strong id="statMicaela">0</strong>
+                </div>
                 <div class="stat-card high-priority">
-                    <span>Alta prioridad</span>
+                    <span>Tareas de Marcos</span>
                     <strong id="statHighPriority">0</strong>
                 </div>
             </div>
@@ -75,7 +110,7 @@
 
     <!-- Pie de página del proyecto -->
     <footer>
-        <p>Creado con ayuda de IA 🤖</p>
+        <p>Trabajo Final Avila, Marcos Alejandro</p>
     </footer>
 
     <!-- Carga de librerías externas -->

@@ -247,7 +247,14 @@
     return checked ? checked.value : 'single';
   }
 
-  // Genera un rango de fechas basado en frecuencia
+  /*
+   * Genera la lista de fechas (con hora incluida) en las que se
+   * repetirá la tarea, desde `fechaInicio` hasta `fechaFin`.
+   * `fechaInicio` y `fechaFin` llegan como strings datetime-local
+   * (ej: "2026-08-19T09:30"), así que cada fecha generada conserva
+   * la misma hora que se eligió en "Desde", solo cambia el día
+   * según la frecuencia (diario, semanal, cada 15 días o mensual).
+   */
   function generarFechasRepetitivas(fechaInicio, fechaFin, frecuencia) {
     const fechas = [];
     const inicio = new Date(fechaInicio);
@@ -371,23 +378,43 @@
    * añadir, editar, borrar o marcar como completada), así el panel
    * siempre refleja el estado actual de `state.tasks`.
    */
-  function updateTaskCounter() {
+  /*
+   * Calcula todas las estadísticas de tareas en un solo lugar:
+   * total, pendientes, completadas y pendientes por cada usuario.
+   * La usan tanto el panel de estadísticas en pantalla como el
+   * informe en PDF, para que ambos muestren siempre los mismos
+   * números sin repetir la lógica dos veces.
+   */
+  function calcularEstadisticas() {
     const total = state.tasks.length;
 
-    const tareasActivas = state.tasks.filter(
+    const pendientes = state.tasks.filter(
       task => !task.completed
-    );
-
-    const pendientes = tareasActivas.length;
+    ).length;
 
     const completadas = state.tasks.filter(
       task => task.completed
     ).length;
 
-    // Pendientes por usuario, reutilizando la misma lógica para los tres.
-    const pendientesFilippa = contarTareasActivasPorUsuario('filippa');
-    const pendientesMicaela = contarTareasActivasPorUsuario('micaela');
-    const pendientesMarcos = contarTareasActivasPorUsuario('marcos');
+    return {
+      total,
+      pendientes,
+      completadas,
+      pendientesFilippa: contarTareasActivasPorUsuario('filippa'),
+      pendientesMicaela: contarTareasActivasPorUsuario('micaela'),
+      pendientesMarcos: contarTareasActivasPorUsuario('marcos')
+    };
+  }
+
+  function updateTaskCounter() {
+    const {
+      total,
+      pendientes,
+      completadas,
+      pendientesFilippa,
+      pendientesMicaela,
+      pendientesMarcos
+    } = calcularEstadisticas();
 
     if (elements.statPending) {
       elements.statPending.textContent = `${pendientes}`;
@@ -593,7 +620,13 @@
     };
   }
 
-  // Genera un PDF con una tabla de tareas y sus columnas relevantes.
+  /*
+   * Genera el informe en PDF con:
+   *   1. Un resumen de estadísticas (los mismos números que se ven
+   *      en el panel de la web: total, pendientes, completadas y
+   *      pendientes por cada usuario).
+   *   2. La tabla completa con el detalle de cada tarea.
+   */
   function exportarPDF() {
     if (!state.tasks.length) {
       mostrarError(
@@ -613,6 +646,35 @@
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
+
+    const {
+      total,
+      pendientes,
+      completadas,
+      pendientesFilippa,
+      pendientesMicaela,
+      pendientesMarcos
+    } = calcularEstadisticas();
+
+    doc.setFontSize(16);
+    doc.text(
+      'Listado de tareas',
+      14,
+      18
+    );
+
+    // ---- Resumen de estadísticas, justo debajo del título ----
+    doc.setFontSize(11);
+    doc.text(
+      `Total: ${total}    Pendientes: ${pendientes}    Completadas: ${completadas}`,
+      14,
+      27
+    );
+    doc.text(
+      `Pendientes por usuario -  Filippa: ${pendientesFilippa}    Micaela: ${pendientesMicaela}    Marcos: ${pendientesMarcos}`,
+      14,
+      34
+    );
 
     const columnas = [
       'ID',
@@ -642,17 +704,11 @@
       )
     ]);
 
-    doc.setFontSize(16);
-    doc.text(
-      'Listado de tareas',
-      14,
-      18
-    );
-
+    // La tabla empieza más abajo para dejar espacio al resumen de arriba.
     doc.autoTable({
       head: [columnas],
       body: filas,
-      startY: 26,
+      startY: 40,
       styles: {
         fontSize: 9
       },
@@ -674,7 +730,15 @@
     registrarLog(
       'export_pdf',
       {
-        count: state.tasks.length
+        count: state.tasks.length,
+        estadisticas: {
+          total,
+          pendientes,
+          completadas,
+          pendientesFilippa,
+          pendientesMicaela,
+          pendientesMarcos
+        }
       }
     );
   }
@@ -790,11 +854,11 @@
     // Validar y construir payloads según el tipo de tarea
     if (taskType === 'repetitive') {
       if (!elements.taskDateStart || !elements.taskDateStart.value) {
-        mostrarError('Selecciona una fecha de inicio para tareas repetitivas');
+        mostrarError('Selecciona una fecha y hora de inicio para tareas repetitivas');
         return;
       }
       if (!elements.taskDateEnd || !elements.taskDateEnd.value) {
-        mostrarError('Selecciona una fecha de fin para tareas repetitivas');
+        mostrarError('Selecciona una fecha y hora de fin para tareas repetitivas');
         return;
       }
 

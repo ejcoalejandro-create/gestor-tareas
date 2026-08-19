@@ -110,6 +110,13 @@ main {
   cursor: pointer;
 }
 
+#taskDateStart,
+#taskDateEnd {
+  flex: 1 1 210px;
+  min-width: 210px;
+  cursor: pointer;
+}
+
 #addButton {
   flex: 0 0 auto;
   min-width: 128px;

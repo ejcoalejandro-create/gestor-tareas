@@ -273,7 +273,13 @@
         incrementoDias = 15;
         break;
       case 'monthly':
-        incrementoDias = 30;
+        /*
+         * FIX: antes se sumaban 30 días fijos, lo que va corriendo
+         * la fecha con el tiempo (ej: 31 de enero -> 2 de marzo en
+         * vez de un mes calendario real). Ahora usamos setMonth
+         * más abajo para avanzar mes a mes de verdad.
+         */
+        incrementoDias = 0;
         break;
       default:
         incrementoDias = 1;
@@ -281,7 +287,12 @@
 
     while (actual <= fin) {
       fechas.push(new Date(actual).toISOString());
-      actual.setDate(actual.getDate() + incrementoDias);
+
+      if (frecuencia === 'monthly') {
+        actual.setMonth(actual.getMonth() + 1);
+      } else {
+        actual.setDate(actual.getDate() + incrementoDias);
+      }
     }
 
     return fechas;
@@ -576,6 +587,26 @@
         if (elements.taskDate) {
           elements.taskDate.value =
             formatearFechaHoraParaInput(fechaTarea);
+        }
+
+        /*
+         * FIX: al editar, forzamos el formulario a modo "Única"
+         * y mostramos singleTaskFields. Si el usuario había dejado
+         * seleccionada "Repetitiva" antes de tocar editar, el campo
+         * de fecha (taskDate) quedaba lleno pero oculto en pantalla.
+         */
+        if (elements.taskTypeRadios && elements.taskTypeRadios.length > 0) {
+          elements.taskTypeRadios.forEach(radio => {
+            radio.checked = radio.value === 'single';
+          });
+        }
+
+        if (elements.singleTaskFields) {
+          elements.singleTaskFields.style.display = 'flex';
+        }
+
+        if (elements.repetitiveTaskFields) {
+          elements.repetitiveTaskFields.style.display = 'none';
         }
 
         if (elements.addButton) {

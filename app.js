@@ -26,7 +26,7 @@
   // ---- Configuración: credenciales de Supabase y webhook externo ----
   const SUPABASE_URL = 'https://qdierydswmebuwwvmywa.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_oVJi9Pn-dW197ySIcdtcQg_YI_jOEkF';
-  const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/98k08d7n2kdi3obelcf5mywb2yh2kpog';
+  const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/cnu87ckg36bm9eqbvag3q7hbttce6p36';
 
   // Estado global de la app: tareas actuales, filtro activo y registro de eventos.
   const state = {
